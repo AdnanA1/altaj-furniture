@@ -1,15 +1,20 @@
+import Image from 'next/image';
 import { Button } from '../components/ui/button';
 
 export function Hero() {
   return (
-    <section className="relative h-[600px] w-full">
+    <section className="relative h-[600px] w-full mt-32">
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-black/50 z-10" />
         <div className="relative h-full">
-          <img
-            src="/images/hero-bg.jpg"
+          <Image
+            src="/images/hero.png"
             alt="Luxury Arabic Furniture"
-            className="w-full h-full object-cover"
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
+            quality={90}
           />
         </div>
       </div>
