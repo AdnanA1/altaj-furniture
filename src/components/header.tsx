@@ -5,15 +5,15 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-transparent">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-32">
+        <div className="flex items-center justify-between h-32 overflow-hidden">
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/images/logo/logo.svg"
+              src="/images/logo/logo2.svg"
               alt="Altaj Furniture Logo"
-              width={400}
-              height={160}
-              className="h-32 w-auto"
+              width={600}
+              height={600}
+              className="w-auto h-32 md:h-40"
               priority
             />
           </Link>
