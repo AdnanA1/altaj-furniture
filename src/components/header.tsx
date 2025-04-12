@@ -9,7 +9,7 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/images/logo/logo2.svg"
+              src="/images/logo/logo1.png"
               alt="Altaj Furniture Logo"
               width={1200}
               height={1200}
