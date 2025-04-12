@@ -13,7 +13,7 @@ export function Header() {
               alt="Altaj Furniture Logo"
               width={600}
               height={600}
-              className="w-auto h-32 md:h-40"
+              className="w-auto h-16 md:h-20"
               priority
             />
           </Link>
