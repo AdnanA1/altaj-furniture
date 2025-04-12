@@ -8,7 +8,7 @@ export function Hero() {
         <div className="absolute inset-0 bg-black/50 z-10" />
         <div className="relative h-full">
           <Image
-            src="/images/hero.png"
+            src="/images/hero1.png"
             alt="Luxury Arabic Furniture"
             fill
             priority
