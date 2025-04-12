@@ -11,9 +11,9 @@ export function Header() {
             <Image
               src="/images/logo/logo2.svg"
               alt="Altaj Furniture Logo"
-              width={600}
-              height={600}
-              className="w-auto h-16 md:h-20"
+              width={1200}
+              height={1200}
+              className="w-auto h-32 md:h-40"
               priority
             />
           </Link>
