@@ -11,7 +11,7 @@ const Slides = [
     title: { en: 'Summer Sale Collections', ar: 'تخفيضات الصيف' },
     description: { en: 'Sale! Up to 50% off', ar: 'تخفيضات حتى 50%' },
     img: '/PHOTO-2025-04-26-01-14-51.jpg',
-    url: '/',
+    url: '/categories',
     bg: 'bg-gradient-to-r from-yellow-50 to-pink-50'
   },
   {
@@ -19,7 +19,7 @@ const Slides = [
     title: { en: 'Modern Furniture', ar: 'أثاث عصري' },
     description: { en: 'Discover our new arrivals', ar: 'اكتشف أحدث المنتجات' },
     img: '/PHOTO-2025-04-26-01-14-50 4.jpg',
-    url: '/',
+    url: '/categories',
     bg: 'bg-gradient-to-r from-pink-50 to-blue-50'
   },
   {
@@ -30,7 +30,7 @@ const Slides = [
       ar: 'أناقة خالدة لمنزلك'
     },
     img: '/PHOTO-2025-04-26-01-18-24 9.jpg',
-    url: '/',
+    url: '/categories',
     bg: 'bg-gradient-to-r from-blue-50 to-yellow-50'
   }
 ];
@@ -66,7 +66,7 @@ const Slider = () => {
               </h1>
               <Link href={slide.url}>
                 <button className="rounded-md bg-black text-white py-3 px-4 ">
-                  {language === "ar" ? "تسوق الان" : "SHOP NOW"}
+                  {language === 'ar' ? 'تسوق الان' : 'SHOP NOW'}
                 </button>
               </Link>
             </div>

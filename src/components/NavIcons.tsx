@@ -1,5 +1,6 @@
 'use client';
 
+import { useCart } from '@/contexts/CartContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -9,9 +10,10 @@ import CartModal from './CartModal';
 const NavIcons = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const { cartItems } = useCart();
 
   const router = useRouter();
-  
+
   // TEMPORARY
   const isLoggedIn = false;
 
@@ -54,9 +56,11 @@ const NavIcons = () => {
           className="cursor-pointer"
           onClick={() => setIsCartOpen((prev) => !prev)}
         />
-        <div className="absolute -top-4 -right-4 w-6 h-6 bg-altaj rounded-full text-white text-sm flex items-center justify-center">
-          2
-        </div>
+        {cartItems.length > 0 && (
+          <div className="absolute -top-4 -right-4 w-6 h-6 bg-altaj rounded-full text-white text-sm flex items-center justify-center">
+            {cartItems.length}
+          </div>
+        )}
       </div>
       {isCartOpen && <CartModal />}
     </div>

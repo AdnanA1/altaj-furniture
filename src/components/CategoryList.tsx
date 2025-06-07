@@ -35,7 +35,9 @@ const CategoryList = () => {
       <div className="flex gap-4 md:gap-8">
         {categories.map((cat, idx) => (
           <Link
-            href={`/list?cat=${cat.name.en}`}
+            href={`/categories/${cat.name.en
+              .toLowerCase()
+              .replace(/\s+/g, '-')}`}
             className="flex-shrink-0 w-full sm:w-1/2 lg:w-1/4 xl:w-1/6"
             key={idx}
           >

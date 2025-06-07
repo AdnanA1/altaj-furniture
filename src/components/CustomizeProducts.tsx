@@ -1,31 +1,30 @@
 'use client';
 import { useCart } from '@/contexts/CartContext';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLanguage } from './LanguageContext';
 
 interface Fabric {
+  id?: string;
   name: string;
-  color: string;
+  swatchUrl?: string;
   pricePerFoot: number;
-  image: string;
+  image?: string;
 }
 
-const FABRICS: Fabric[] = [
+const fallbackFabrics: Fabric[] = [
   {
     name: 'Red',
-    color: 'bg-red-500',
     pricePerFoot: 10,
     image: '/PHOTO-2025-04-26-01-18-24 6.jpg'
   },
   {
     name: 'Blue',
-    color: 'bg-blue-500',
     pricePerFoot: 12,
     image: '/PHOTO-2025-04-26-01-18-24 3.jpg'
   },
   {
     name: 'Green',
-    color: 'bg-green-500',
     pricePerFoot: 15,
     image: '/PHOTO-2025-04-26-01-18-24 5.jpg'
   }
@@ -46,17 +45,23 @@ interface CustomizeProductsProps {
     price: number;
     fabricObj: Fabric;
   }) => void;
+  product?: any;
 }
 
 const CustomizeProducts = ({
   initialValues,
-  onSave
+  onSave,
+  product
 }: CustomizeProductsProps) => {
   const { language } = useLanguage();
+  const router = useRouter();
   const [width, setWidth] = useState('');
   const [length, setLength] = useState('');
   const [height, setHeight] = useState('');
-  const [selectedFabric, setSelectedFabric] = useState<Fabric>(FABRICS[0]);
+  const [fabrics, setFabrics] = useState<Fabric[]>(fallbackFabrics);
+  const [selectedFabric, setSelectedFabric] = useState<Fabric>(
+    fallbackFabrics[0]
+  );
   const [errors, setErrors] = useState<{
     width?: string;
     length?: string;
@@ -66,16 +71,33 @@ const CustomizeProducts = ({
   const { addToCart } = useCart();
 
   useEffect(() => {
+    async function fetchFabrics() {
+      try {
+        const res = await fetch('/api/fabrics');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        setFabrics(data);
+        setSelectedFabric(data[0]);
+      } catch {
+        setFabrics(fallbackFabrics);
+        setSelectedFabric(fallbackFabrics[0]);
+      }
+    }
+    fetchFabrics();
+  }, []);
+
+  useEffect(() => {
     if (initialValues) {
       setWidth(initialValues.width || '');
       setLength(initialValues.length || '');
       setHeight(initialValues.height || '');
       if (initialValues.fabric) {
-        const found = FABRICS.find((f) => f.name === initialValues.fabric);
+        const found = fabrics.find((f) => f.name === initialValues.fabric);
         if (found) setSelectedFabric(found);
       }
     }
-  }, [initialValues]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValues, fabrics]);
 
   const area = Number(width) * Number(length);
   const price = area && selectedFabric ? area * selectedFabric.pricePerFoot : 0;
@@ -117,15 +139,24 @@ const CustomizeProducts = ({
       });
     } else {
       addToCart({
-        id: 'custom',
+        id: product?.id || 'custom',
         name:
-          language === 'ar'
-            ? `مفروشات مخصصة (${selectedFabric.name})`
-            : `Custom Furniture (${selectedFabric.name})`,
+          typeof product?.name === 'object'
+            ? product?.name[language]
+            : product?.name ||
+              (language === 'ar'
+                ? `مفروشات مخصصة (${selectedFabric.name})`
+                : `Custom Furniture (${selectedFabric.name})`),
         options: { width, length, height, fabric: selectedFabric.name },
         price,
-        img1: selectedFabric.image
+        img1:
+          product?.imageUrl ||
+          product?.img1 ||
+          selectedFabric.swatchUrl ||
+          selectedFabric.image ||
+          ''
       });
+      router.push('/cart');
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
     }
@@ -140,7 +171,7 @@ const CustomizeProducts = ({
         className="flex items-center gap-3"
         aria-label={language === 'ar' ? 'اختيار القماش' : 'Fabric selection'}
       >
-        {FABRICS.map((fabric) => (
+        {fabrics.map((fabric) => (
           <li key={fabric.name} className="relative">
             <button
               type="button"
@@ -154,7 +185,7 @@ const CustomizeProducts = ({
               role="button"
             >
               <img
-                src={fabric.image}
+                src={fabric.swatchUrl || fabric.image || ''}
                 alt={fabric.name}
                 className="object-cover w-full h-full rounded-full"
               />

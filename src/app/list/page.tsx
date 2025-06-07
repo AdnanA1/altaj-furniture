@@ -2,6 +2,7 @@
 import Filter from '@/components/Filter';
 import ProductList from '@/components/ProductList';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Suspense } from 'react';
 
 const ListPage = () => {
@@ -13,9 +14,11 @@ const ListPage = () => {
           <h1 className="text-4xl font-semibold leading-[48px] text-gray-700">
             Grab up to 50% off on <br /> Select Products
           </h1>
-          <button className="rounded-3xl bg-altaj text-white w-max py-3 px-5 text-sm">
-            Buy Now
-          </button>
+          <Link href="/categories">
+            <button className="rounded-3xl bg-altaj text-white w-max py-3 px-5 text-sm">
+              Buy Now
+            </button>
+          </Link>
         </div>
         <div className="relative w-1/3">
           <Image
