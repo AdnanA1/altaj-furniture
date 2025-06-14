@@ -42,6 +42,14 @@ export default function AdminOrdersPage() {
   const [status, setStatus] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [fabrics, setFabrics] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  const [showDelete, setShowDelete] = useState<string | null>(null);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     fetchOrders();
@@ -51,9 +59,15 @@ export default function AdminOrdersPage() {
 
   async function fetchOrders() {
     setLoading(true);
-    const res = await fetch('/api/orders');
-    const data = await res.json();
-    setOrders(data);
+    try {
+      const res = await fetch('/api/orders');
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      setOrders(data);
+    } catch {
+      setToast({ message: 'Failed to fetch orders.', type: 'error' });
+      setOrders([]);
+    }
     setLoading(false);
   }
 
@@ -82,12 +96,34 @@ export default function AdminOrdersPage() {
 
   async function handleStatusUpdate() {
     if (!selected) return;
-    await fetch('/api/orders', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: selected.id, status })
-    });
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selected.id, status })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setToast({ message: 'Order status updated.', type: 'success' });
+    } catch {
+      setToast({ message: 'Failed to update status.', type: 'error' });
+    }
     setSelected(null);
+    fetchOrders();
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setToast({ message: 'Order deleted.', type: 'success' });
+    } catch {
+      setToast({ message: 'Failed to delete order.', type: 'error' });
+    }
+    setShowDelete(null);
     fetchOrders();
   }
 
@@ -98,26 +134,77 @@ export default function AdminOrdersPage() {
     return fabrics.find((f) => f.id === fabricId);
   }
 
+  // Search and pagination
+  const filtered = orders.filter(
+    (o) =>
+      o.id.toLowerCase().includes(search.toLowerCase()) ||
+      (o.customer?.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (o.customer?.email?.toLowerCase() || '').includes(search.toLowerCase())
+  );
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-8">Orders</h1>
-      {loading ? (
-        <div>Loading...</div>
-      ) : (
-        <table className="w-full border rounded shadow text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2">Order ID</th>
-              <th className="p-2">Customer</th>
-              <th className="p-2">Total</th>
-              <th className="p-2">Status</th>
-              <th className="p-2">Date</th>
-              <th className="p-2">Actions</th>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">Orders</h1>
+      </div>
+      <div className="flex gap-4 mb-4 items-center">
+        <input
+          className="border p-2 rounded w-64"
+          placeholder="Search orders..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+        {loading && (
+          <div className="flex items-center gap-2 text-gray-500">
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8z"
+              />
+            </svg>
+            Loading...
+          </div>
+        )}
+      </div>
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-50 px-4 py-2 rounded shadow text-white ${
+            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+      <div className="overflow-x-auto rounded shadow">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-100 sticky top-0 z-10">
+            <tr>
+              <th className="p-2 text-left">Order ID</th>
+              <th className="p-2 text-left">Customer</th>
+              <th className="p-2 text-left">Total</th>
+              <th className="p-2 text-left">Status</th>
+              <th className="p-2 text-left">Date</th>
+              <th className="p-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="border-t">
+            {paginated.map((o) => (
+              <tr key={o.id} className="border-t hover:bg-gray-50">
                 <td className="p-2 font-mono">{o.id.slice(0, 8)}...</td>
                 <td className="p-2">{o.customer?.name || '-'}</td>
                 <td className="p-2">${o.total}</td>
@@ -125,18 +212,49 @@ export default function AdminOrdersPage() {
                 <td className="p-2">
                   {new Date(o.createdAt).toLocaleString()}
                 </td>
-                <td className="p-2">
+                <td className="p-2 flex gap-2">
                   <button
-                    className="px-2 py-1 bg-blue-500 text-white rounded"
+                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    title="Details"
                     onClick={() => openDetails(o)}
                   >
-                    Details
+                    📄
+                  </button>
+                  <button
+                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                    title="Delete"
+                    onClick={() => setShowDelete(o.id)}
+                  >
+                    🗑️
                   </button>
                 </td>
               </tr>
             ))}
+            {!loading && paginated.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-4 text-center text-gray-400">
+                  No orders found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+      </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              className={`px-3 py-1 rounded ${
+                n === page ? 'bg-altaj text-white' : 'bg-gray-200'
+              }`}
+              onClick={() => setPage(n)}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
       )}
       {/* Details Modal */}
       {selected && (
@@ -224,6 +342,32 @@ export default function AdminOrdersPage() {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded shadow-lg w-full max-w-sm flex flex-col gap-4">
+            <h2 className="text-xl font-bold mb-2">Delete Order?</h2>
+            <div>
+              Are you sure you want to delete this order? This action cannot be
+              undone.
+            </div>
+            <div className="flex gap-4 justify-end mt-4">
+              <button
+                className="px-4 py-2 bg-gray-200 rounded"
+                onClick={() => setShowDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded"
+                onClick={() => handleDelete(showDelete)}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
