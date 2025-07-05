@@ -1,5 +1,7 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 interface OrderItem {
   id: string;
@@ -50,12 +52,19 @@ export default function AdminOrdersPage() {
   } | null>(null);
   const [showDelete, setShowDelete] = useState<string | null>(null);
   const PAGE_SIZE = 10;
+  const router = useRouter();
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      if (!user || user.app_metadata?.role !== 'admin') {
+        router.push('/admin/login');
+      }
+    });
     fetchOrders();
     fetchProducts();
     fetchFabrics();
-  }, []);
+  }, [router]);
 
   async function fetchOrders() {
     setLoading(true);

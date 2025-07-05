@@ -1,38 +1,42 @@
-import { PrismaClient } from '@prisma/client';
-import { NextApiRequest, NextApiResponse } from 'next';
+import { prisma } from '@/lib/prisma';
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
-const prisma = new PrismaClient();
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export async function GET(request: Request) {
+  // Admin check
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { cookie: request.headers.get('cookie') || '' } } }
+  );
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user || user.app_metadata?.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Forbidden: Admins only' }), {
+      status: 403
+    });
   }
 
   try {
-    // Total sales
     const totalSales = await prisma.order.aggregate({ _sum: { total: true } });
-    // Total orders
     const totalOrders = await prisma.order.count();
-    // Total customers
     const totalCustomers = await prisma.customer.count();
-    // Sales by product
     const salesByProduct = await prisma.orderItem.groupBy({
       by: ['productId'],
       _sum: { price: true, quantity: true },
       _count: { _all: true }
     });
-    res.status(200).json({
+    return NextResponse.json({
       totalSales: totalSales._sum.total || 0,
       totalOrders,
       totalCustomers,
       salesByProduct
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch accounting data' });
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json(
+      { error: 'Failed to fetch accounting data' },
+      { status: 500 }
+    );
   }
 }

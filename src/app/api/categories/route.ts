@@ -20,26 +20,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email');
-    if (email) {
-      const customer = await prisma.customer.findUnique({ where: { email } });
-      if (!customer) return NextResponse.json([]);
-      const orders = await prisma.order.findMany({
-        where: { customerId: customer.id },
-        include: { items: true, customer: true },
-        orderBy: { createdAt: 'asc' }
-      });
-      return NextResponse.json(orders);
-    }
-    const orders = await prisma.order.findMany({
-      include: { items: true, customer: true },
-      orderBy: { createdAt: 'desc' }
-    });
-    return NextResponse.json(orders);
+    const categories = await prisma.category.findMany();
+    return NextResponse.json(categories);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch orders' },
+      { error: 'Failed to fetch categories' },
       { status: 500 }
     );
   }
@@ -48,20 +33,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, items, total, status } = body;
-    const order = await prisma.order.create({
-      data: {
-        customerId,
-        total,
-        status,
-        items: { create: items }
-      },
-      include: { items: true, customer: true }
+    const { name, description } = body;
+    const category = await prisma.category.create({
+      data: { name, description }
     });
-    return NextResponse.json(order, { status: 201 });
-  } catch (error) {
+    return NextResponse.json(category, { status: 201 });
+  } catch (error: any) {
+    console.error('Failed to save category:', error);
+    if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+      return NextResponse.json(
+        { error: 'Category name already exists.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { error: 'Failed to save category.' },
       { status: 500 }
     );
   }
@@ -71,15 +57,11 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, ...data } = body;
-    const order = await prisma.order.update({
-      where: { id },
-      data,
-      include: { items: true, customer: true }
-    });
-    return NextResponse.json(order);
+    const category = await prisma.category.update({ where: { id }, data });
+    return NextResponse.json(category);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to update order' },
+      { error: 'Failed to update category.' },
       { status: 500 }
     );
   }
@@ -89,11 +71,11 @@ export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
     const { id } = body;
-    await prisma.order.delete({ where: { id } });
+    await prisma.category.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to delete order' },
+      { error: 'Failed to delete category.' },
       { status: 500 }
     );
   }

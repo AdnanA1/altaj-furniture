@@ -1,16 +1,31 @@
 'use client';
-import { signIn, signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
-  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    const session = supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user || null);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   async function handleSubmit(e: any) {
     e.preventDefault();
@@ -23,59 +38,54 @@ const LoginPage = () => {
     }
     try {
       if (mode === 'login') {
-        // Try to find customer
-        const res = await fetch(
-          `/api/customers?email=${encodeURIComponent(email)}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.id) {
-            localStorage.setItem('customer', JSON.stringify(data));
-            localStorage.setItem('last_checkout_email', email);
-            router.push('/');
-            return;
-          } else {
-            setMode('register');
-            setError('No account found. Please register.');
-            setLoading(false);
-            return;
-          }
+        const { data, error: loginError } =
+          await supabase.auth.signInWithPassword({ email, password });
+        if (loginError) {
+          setError(loginError.message);
+          setLoading(false);
+          return;
         }
+        setUser(data.user);
+        localStorage.setItem('customer', JSON.stringify(data.user));
+        localStorage.setItem('last_checkout_email', email);
+        const isAdmin = data.user?.user_metadata?.role === 'admin';
+        router.push(isAdmin ? '/admin' : '/');
+        return;
       } else {
-        // Register new customer
         if (!name) {
           setError('Name required');
           setLoading(false);
           return;
         }
-        const res = await fetch('/api/customers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email })
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name } } // Do not allow user to set role here
         });
-        if (res.ok) {
-          const data = await res.json();
-          localStorage.setItem('customer', JSON.stringify(data));
-          localStorage.setItem('last_checkout_email', email);
-          router.push('/');
+        // NOTE: Admin roles must be set by a privileged user or via the Supabase dashboard, not by the user.
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
           return;
-        } else {
-          const data = await res.json();
-          if (
-            res.status === 409 &&
-            data.error === 'Email is already registered.'
-          ) {
-            setMode('login');
-            setError('Email is already registered. Please log in.');
-          } else {
-            setError(data.error || 'Registration failed');
-          }
         }
+        setUser(data.user);
+        localStorage.setItem('customer', JSON.stringify(data.user));
+        localStorage.setItem('last_checkout_email', email);
+        const isAdmin = data.user?.user_metadata?.role === 'admin';
+        router.push(isAdmin ? '/admin' : '/');
+        return;
       }
     } catch {
       setError('Login/registration failed');
     }
     setLoading(false);
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem('customer');
+    localStorage.removeItem('last_checkout_email');
   }
 
   return (
@@ -84,17 +94,15 @@ const LoginPage = () => {
         <h1 className="text-2xl font-bold mb-2 text-altaj">
           {mode === 'login' ? 'Customer Login' : 'Register'}
         </h1>
-        {/* Google Auth Section */}
-        {status === 'loading' ? (
-          <div>Loading session...</div>
-        ) : session ? (
+        {/* Supabase Auth Section */}
+        {user ? (
           <>
             <div className="text-green-600 text-sm mb-2">
-              Logged in as {session.user?.email}
+              Logged in as {user.email}
             </div>
             <button
               className="bg-gray-300 text-black px-4 py-2 rounded mb-4"
-              onClick={() => signOut()}
+              onClick={handleSignOut}
             >
               Sign out
             </button>
@@ -102,7 +110,15 @@ const LoginPage = () => {
         ) : (
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
-            onClick={() => signIn('google')}
+            onClick={async () => {
+              setLoading(true);
+              setError('');
+              const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google'
+              });
+              if (error) setError(error.message);
+              setLoading(false);
+            }}
           >
             Sign in with Google
           </button>
@@ -134,6 +150,14 @@ const LoginPage = () => {
               required
             />
           )}
+          <input
+            className="border p-2 rounded"
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
           <button
             type="submit"
             className="bg-altaj text-white px-4 py-2 rounded mt-2"

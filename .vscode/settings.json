@@ -9,5 +9,7 @@
     "مفروشات"
   ],
   "ecl.launchConfiguration": "not found",
-  "ecl.targetCluster": {}
+  "ecl.targetCluster": {},
+  "WillLuke.nextjs.addTypesOnSave": true,
+  "WillLuke.nextjs.hasPrompted": true
 }
