@@ -1,7 +1,7 @@
 'use client';
+import { supabase } from 'lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
 
 interface OrderItem {
   id: string;
